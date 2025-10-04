@@ -5,18 +5,43 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Doğum Günün Kutlu Olsun 🎉</title>
   <style>
-    :root{--bg:#0b1020;--card:#0f1724;--accent:#ff6b6b}
-    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial}
-    body{background:linear-gradient(180deg,#07122a 0%, #08132a 40%, #051124 100%);color:#fff;display:grid;place-items:center}
-    .wrap{width:min(980px,95vw);padding:28px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));box-shadow:0 10px 30px rgba(2,6,23,0.6);text-align:center}
-    h1{font-size:clamp(28px,6vw,56px);margin:6px 0 2px;letter-spacing:1px}
-    p.lead{opacity:0.9;margin:0 0 18px}
-    .clock{font-weight:700;font-size:18px;background:rgba(255,255,255,0.03);display:inline-block;padding:8px 12px;border-radius:12px}
-    .btn{display:inline-flex;gap:10px;align-items:center;border:0;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;background:#111827;color:#fff}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial;overflow:hidden}
+    body{display:grid;place-items:center;color:#fff;text-align:center;position:relative;}
+    
+    /* --- Arka Plan Efekti --- */
+    body::before{
+      content:"";
+      position:fixed;
+      top:0;left:0;width:100%;height:100%;
+      background:url('anne.jpg') center/cover no-repeat;
+      filter:blur(6px) brightness(0.8);
+      transform:scale(1.1);
+      animation: zoomIn 30s ease-in-out infinite alternate;
+      z-index:-2;
+    }
+
+    @keyframes zoomIn{
+      from{transform:scale(1.1) translateY(0px);}
+      to{transform:scale(1.2) translateY(-20px);}
+    }
+
+    body::after{
+      content:"";
+      position:fixed;inset:0;
+      background:rgba(0,0,0,0.45);
+      z-index:-1;
+    }
+
+    h1{font-size:clamp(28px,6vw,56px);margin:6px 0 2px;letter-spacing:1px;text-shadow:0 2px 10px rgba(0,0,0,0.5)}
+    p.lead{opacity:0.9;margin:0 0 18px;text-shadow:0 1px 8px rgba(0,0,0,0.6)}
+    .wrap{padding:28px;background:rgba(0,0,0,0.35);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+    .clock{font-weight:700;font-size:18px;background:rgba(255,255,255,0.1);display:inline-block;padding:8px 12px;border-radius:12px}
+    .btn{display:inline-flex;gap:10px;align-items:center;border:0;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;backdrop-filter:blur(4px);transition:0.2s}
+    .btn:hover{background:rgba(255,255,255,0.25)}
     .controls{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-    .small{font-size:13px;opacity:0.85}
+    .small{font-size:13px;opacity:0.9}
     canvas#confetti{position:fixed;left:0;top:0;pointer-events:none;z-index:9999}
-    footer{margin-top:18px;color:rgba(255,255,255,0.45);font-size:13px}
+    footer{margin-top:18px;color:rgba(255,255,255,0.6);font-size:13px;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
     .heart{display:inline-block;margin-left:6px;transform:translateY(-2px)}
   </style>
 </head>
@@ -37,57 +62,26 @@
 
     <p id="countdown" class="small" style="margin-top:10px">Geri sayım: —</p>
 
-    <footer>Sayfayı GitHub Pages'e koyup repo adını <code>index.html</code> olarak yayınlayabilirsin.</footer>
+    <footer>GitHub Pages'te yayınlamak için dosya adını <code>index.html</code> olarak bırak ve <code>anne.jpg</code> fotoğrafını yanına ekle.</footer>
   </div>
 
 <script>
-// --- Ayarlar ---
-// Eğer kutlamayı gece 00:00'da tetiklemek istiyorsan select'i "12:00 (gece)" yerine "12:00 (gün)" olarak değiştir.
-// Kullanıcı açmazsa otomatik ses çalma tarayıcı tarafından engellenebilir; bu yüzden "Müzik Aç" butonunu ekledik.
-
 const celebrateBtn = document.getElementById('celebrate');
 const playBtn = document.getElementById('play-music');
 const countdownEl = document.getElementById('countdown');
 const whenSelect = document.getElementById('when');
 
-let audioContext = null;
-let musicStarted = false;
-
-function startMusic() {
-  if (musicStarted) return;
-  musicStarted = true;
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const now = audioContext.currentTime;
-  // Basit "Happy Birthday" tarzı kısa melodi, telifsiz (WebAudio oscillator ile üretilir)
-  const notes = [  523.25, 523.25, 587.33, 523.25, 698.46, 659.26, // bar 1
-                   523.25, 523.25, 587.33, 523.25, 783.99, 698.46 ];
-  let t = now;
-  notes.forEach((f,i)=>{
-    const o = audioContext.createOscillator();
-    const g = audioContext.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.12, t+0.01);
-    g.gain.linearRampToValueAtTime(0.0001, t+0.35);
-    o.connect(g); g.connect(audioContext.destination);
-    o.start(t); o.stop(t+0.36);
-    t += 0.36;
-  });
-}
-
+// Müzik sonradan eklenecek — şu anda sadece buton görünür.
 playBtn.addEventListener('click', ()=>{
-  try { startMusic(); playBtn.textContent = '🔊 Müzik Çalıyor'; }
-  catch(e){ alert('Tarayıcı müziği başlatamadı: '+e); }
+  alert('🎵 Müzik dosyası daha eklenmedi, sonra eklenecek.');
 });
 
-// --- Confetti basit uygulaması ---
+// --- Confetti ---
 const canvas = document.getElementById('confetti');
 const ctx = canvas.getContext('2d');
 let W = canvas.width = innerWidth;
 let H = canvas.height = innerHeight;
 window.addEventListener('resize', ()=>{ W = canvas.width = innerWidth; H = canvas.height = innerHeight; });
-
 function random(min,max){return Math.random()*(max-min)+min}
 class Confetti{
   constructor(){
@@ -106,10 +100,9 @@ function launchConfetti(amount=120){ confettis = []; for(let i=0;i<amount;i++) c
 function animate(){ ctx.clearRect(0,0,W,H); confettis.forEach(c=>{ c.step(); c.draw(); }); requestAnimationFrame(animate); }
 animate();
 
-// --- Kutlama tetikleyicisi ve geri sayım ---
+// --- Geri sayım ---
 function getNextTriggerDate(hour){
   const now = new Date();
-  // hour: 0..23 (0 = 00:00, 12 = 12:00)
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
   if (target <= now) target.setDate(target.getDate()+1);
   return target;
@@ -121,10 +114,7 @@ function updateCountdown(){
   const diff = target - new Date();
   const h = Math.floor(diff/3600000); const m = Math.floor((diff%3600000)/60000); const s = Math.floor((diff%60000)/1000);
   countdownEl.textContent = `Geri sayım: ${h} saat ${m} dakika ${s} saniye`;
-  // otomatik tetikleme eşiği: diff < 1000 -> başlat
-  if (diff <= 900 && diff >= -5000){ // 900ms tolerans
-    triggerCelebrate();
-  }
+  if (diff <= 900 && diff >= -5000){ triggerCelebrate(); }
 }
 setInterval(updateCountdown,1000);
 
@@ -132,23 +122,13 @@ let alreadyCelebrated = false;
 function triggerCelebrate(){
   if (alreadyCelebrated) return; alreadyCelebrated = true;
   launchConfetti(220);
-  startMusic();
-  // görsel efekt: başlık büyüt
   const h1 = document.querySelector('h1');
   h1.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:1200,iterations:3});
   celebrateBtn.textContent = '🎊 Kutlandı!';
 }
-
 celebrateBtn.addEventListener('click', ()=>{ triggerCelebrate(); });
-
-// sayfa açıldığında eğer zaman zaten geçtiyse, manuel seçim için buton gösterilir
-
-// Kullanıcı başka bir güne ayarlamak isterse select ile seçer
 whenSelect.addEventListener('change', ()=>{ alreadyCelebrated=false; updateCountdown(); });
-
-// İlk çalıştırma
 updateCountdown();
-
 </script>
 </body>
 </html>
